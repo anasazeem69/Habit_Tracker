@@ -6,7 +6,7 @@ import { colors } from '../../config/colors';
 
 const { width, height } = Dimensions.get('window');
 
-const MapContainer = forwardRef(({ children }, ref) => {
+const MapContainer = forwardRef(({ children, ...props }, ref) => {
   const mapRef = useRef(null);
   const { currentLocation, isLoading } = useContext(LocationContext);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -50,7 +50,7 @@ const MapContainer = forwardRef(({ children }, ref) => {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}
-      
+
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -65,6 +65,7 @@ const MapContainer = forwardRef(({ children }, ref) => {
           console.log('✅ Map is ready');
           setIsMapReady(true);
         }}
+        onRegionChangeComplete={props.onRegionChangeComplete}
       >
         {currentLocation && (
           <Marker

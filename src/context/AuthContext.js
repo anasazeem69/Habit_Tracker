@@ -1,7 +1,9 @@
 import React, { createContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as authApi from '../api/auth';
 import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/clerk-expo';
+import { parseJwt } from '../utils/jwt';
 
 // Session configuration
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -23,6 +25,20 @@ export const AuthProvider = ({ children }) => {
 
   // Check if session is expired
   const isSessionExpired = (sessionData) => {
+    // Check if access token is present and valid
+    if (sessionData?.tokens?.accessToken) {
+      const decoded = parseJwt(sessionData.tokens.accessToken);
+      if (decoded && decoded.exp) {
+        const now = Date.now() / 1000;
+        if (decoded.exp < now) {
+          console.log('⚠️ Token expired at:', new Date(decoded.exp * 1000));
+          return true;
+        }
+        return false;
+      }
+    }
+
+    // Fallback to timestamp check if standard JWT check fails
     if (!sessionData || !sessionData.timestamp) return true;
     const now = Date.now();
     const sessionAge = now - sessionData.timestamp;
@@ -416,6 +432,45 @@ export const AuthProvider = ({ children }) => {
     return legacyTokens?.accessToken || null;
   };
 
+  // Listen for global logout events from API client
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('auth.session_expired', () => {
+      console.log('🔒 AuthContext: Received global logout event');
+      logout();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [logout]);
+
+  const updateUserStats = useCallback(async ({ xpEarned, newLevel }) => {
+    if (!activeUser) return;
+
+    const updatedUser = { ...activeUser };
+
+    // Update XP
+    if (xpEarned) {
+      updatedUser.totalXP = (updatedUser.totalXP || 0) + xpEarned;
+      updatedUser.currentXP = (updatedUser.currentXP || 0) + xpEarned;
+    }
+
+    // Update Level
+    if (newLevel) {
+      updatedUser.level = newLevel;
+    }
+
+    // Update state
+    if (authSource === 'legacy') {
+      setLegacyUser(updatedUser);
+      await saveLegacyUserSession(updatedUser, legacyTokens);
+    } else if (authSource === 'clerk') {
+      // For Clerk, we might need a separate mechanism if these are custom attributes,
+      // but assuming they are app-level overrides for now:
+      setLegacyUser(updatedUser);
+    }
+  }, [activeUser, authSource, legacyTokens]);
+
   return (
     <AuthContext.Provider value={{
       user: activeUser,
@@ -437,7 +492,8 @@ export const AuthProvider = ({ children }) => {
       createLinkInvite,
       acceptLinkInvite,
       revokeLink,
-      loadUserLinks
+      loadUserLinks,
+      updateUserStats
     }}>
       {children}
     </AuthContext.Provider>

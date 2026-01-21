@@ -3,11 +3,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import TabNavigator from '../navigation/TabNavigator';
+import DoctorNavigator from '../navigation/DoctorNavigator';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
+import CreateHabitScreen from '../screens/CreateHabitScreen';
+import HabitDetailScreen from '../screens/HabitDetailScreen';
 import { colors } from '../config/colors';
 
 const Stack = createNativeStackNavigator();
@@ -19,12 +22,20 @@ const AppNavigator = () => {
 
   return (
     <>
-      <Stack.Navigator 
+      <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName="Login"
       >
         {user ? (
-          <Stack.Screen name="Main" component={TabNavigator} />
+          user.role === 'doctor' ? (
+            <Stack.Screen name="DoctorMain" component={DoctorNavigator} />
+          ) : (
+            <>
+              <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen name="CreateHabit" component={CreateHabitScreen} />
+              <Stack.Screen name="HabitDetail" component={HabitDetailScreen} />
+            </>
+          )
         ) : (
           // User is not authenticated - show auth flow starting with Login
           <>
@@ -36,7 +47,7 @@ const AppNavigator = () => {
           </>
         )}
       </Stack.Navigator>
-      
+
       {/* Show loading overlay when needed */}
       {loading && (
         <View style={{

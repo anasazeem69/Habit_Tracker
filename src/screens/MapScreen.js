@@ -9,7 +9,7 @@ import { LocationContext } from '../context/LocationContext';
 import { useCategories } from '../context/CategoryContext';
 import { useTerritories } from '../context/TerritoryContext';
 import { AuthContext } from '../context/AuthContext';
-import { getCellFromLocation } from '../services/gridService';
+import { getCellFromLocation, getCellsInRegion } from '../services/gridService';
 import { colors } from '../config/colors';
 import { listZonesForChild } from '../api/geofences';
 import { Circle } from 'react-native-maps';
@@ -20,16 +20,16 @@ const API_BASE_URL = config.API_BASE_URL;
 const MapScreen = () => {
   const { currentLocation, refreshLocation } = useContext(LocationContext);
   const { selectedCategory } = useCategories();
-  const { user, getAuthToken } = useContext(AuthContext);
-  const { 
-    territories, 
-    isLoading: territoriesLoading, 
-    loadTerritories, 
+  const { user, getAuthToken, updateUserStats } = useContext(AuthContext);
+  const {
+    territories,
+    isLoading: territoriesLoading,
+    loadTerritories,
     loadAllTerritories,
-    claim, 
-    release, 
+    claim,
+    release,
     getTerritoryStatus,
-    isClaimedByUser 
+    isClaimedByUser
   } = useTerritories();
   const [currentCellId, setCurrentCellId] = useState(null);
   const [showGrid, setShowGrid] = useState(true);
@@ -39,7 +39,9 @@ const MapScreen = () => {
   const [loadingZones, setLoadingZones] = useState(false);
   const [latestAssignment, setLatestAssignment] = useState(null);
   const shownAssignmentRef = useRef(false);
+
   const mapRef = useRef(null);
+  const [visibleCells, setVisibleCells] = useState(null); // Infinite Grid State
 
   const haversineDistance = (lat1, lon1, lat2, lon2) => {
     const toRad = (value) => (value * Math.PI) / 180;
@@ -150,7 +152,7 @@ const MapScreen = () => {
 
   const loadTerritoriesForLocation = async () => {
     if (!currentLocation || !selectedCategory) return;
-    
+
     try {
       await loadTerritories(
         currentLocation.latitude,
@@ -177,21 +179,40 @@ const MapScreen = () => {
     }
 
     try {
-      await claim(
+      const result = await claim(
         currentCellId,
         selectedCategory._id,
         user.id,
         currentLocation.latitude,
         currentLocation.longitude
       );
-      Alert.alert('Success', 'Territory claimed successfully!');
-      
+
+      // Handle Gamification Rewards
+      if (result.rewards && updateUserStats) {
+        updateUserStats(result.rewards);
+        // Optional: Show specific alert for leveling up? 
+        // For now, the Profile badge/bar update is sufficient, or we can append to the alert.
+      }
+
+      const successMessage = result.message || 'Territory claimed successfully!';
+      Alert.alert('Success', successMessage);
+
       // Reload all territories to show the new claim globally
       setTimeout(() => {
         loadAllTerritories();
       }, 500);
     } catch (error) {
-      if (error?.meta?.type === 'GEOZONE_OUT_OF_BOUNDS') {
+      if (error?.meta?.type === 'NO_HABIT_ENERGY') {
+        Alert.alert(
+          'No Habit Energy 🔋',
+          'You must complete at least one habit today before you can claim territories!\n\nGo to the Habits tab and check-in.'
+        );
+      } else if (error?.meta?.type === 'TERRITORY_LOCKED') {
+        Alert.alert(
+          'Territory Locked 🔒',
+          'This territory is protected by a high-streak player. You cannot steal it until the lock expires.'
+        );
+      } else if (error?.meta?.type === 'GEOZONE_OUT_OF_BOUNDS') {
         Alert.alert(
           'Outside Approved Zone',
           'Move back into your approved area before claiming this territory.'
@@ -218,7 +239,7 @@ const MapScreen = () => {
     try {
       await release(currentCellId, user.id);
       Alert.alert('Success', 'Territory released successfully!');
-      
+
       // Reload all territories to update the global view
       setTimeout(() => {
         loadAllTerritories();
@@ -228,21 +249,47 @@ const MapScreen = () => {
     }
   };
 
-  // Calculate current cell ID when location changes
+  // Calculate current cell ID when location and category changes
   useEffect(() => {
     if (currentLocation) {
+      // Determine resolution: Fitness = LARGE (1km), Others = SMALL (100m)
+      const resolution = selectedCategory?.name === 'Fitness' ? 'LARGE' : 'SMALL';
+
       const cellId = getCellFromLocation(
         currentLocation.latitude,
-        currentLocation.longitude
+        currentLocation.longitude,
+        resolution
       );
-      console.log(`📍 MapScreen: Setting currentCellId to: ${cellId}`);
+      console.log(`📍 MapScreen: Setting currentCellId to: ${cellId} (${resolution})`);
       setCurrentCellId(cellId);
     }
-  }, [currentLocation]);
+  }, [currentLocation, selectedCategory]);
 
   const handleRefreshLocation = async () => {
     await refreshLocation();
   };
+
+  const handleRegionChangeComplete = (region) => {
+    // console.log('📍 Region changed:', region);
+    if (!region) return;
+
+    // Determine resolution
+    const resolution = selectedCategory?.name === 'Fitness' ? 'LARGE' : 'SMALL';
+
+    // Calculate visible cells for viewport
+    const cells = getCellsInRegion(region, resolution);
+    setVisibleCells(cells);
+  };
+
+  // Also recalculate when category changes (resolution changes)
+  useEffect(() => {
+    if (mapRef.current) {
+      // Getting current region from mapRef is tricky in RN Maps without tracking state.
+      // But we can trigger a recalc if we tracked region state.
+      // For now, let's assume user moves map or we settle for next move.
+      // Better: Track region in state.
+    }
+  }, [selectedCategory]);
 
   // Territory interaction handlers
   const handleTerritoryPress = (territory) => {
@@ -258,19 +305,24 @@ const MapScreen = () => {
 
   const handleTerritoryClaim = async () => {
     if (!selectedTerritory || !user || !currentLocation) return;
-    
+
     try {
-      await claim(
+      const result = await claim(
         selectedTerritory.cellId,
         selectedCategory._id,
         user.id,
         currentLocation.latitude,
         currentLocation.longitude
       );
-      
+
+      // Handle Gamification Rewards
+      if (result.rewards && updateUserStats) {
+        updateUserStats(result.rewards);
+      }
+
       Alert.alert('Success', 'Territory claimed successfully!');
       setShowTerritoryModal(false);
-      
+
       // Refresh all territories after claiming
       setTimeout(() => {
         loadAllTerritories();
@@ -283,13 +335,13 @@ const MapScreen = () => {
 
   const handleTerritoryRelease = async () => {
     if (!selectedTerritory || !user) return;
-    
+
     try {
       await release(selectedTerritory.cellId, user.id);
-      
+
       Alert.alert('Success', 'Territory released successfully!');
       setShowTerritoryModal(false);
-      
+
       // Refresh all territories after releasing
       setTimeout(() => {
         loadAllTerritories();
@@ -301,7 +353,7 @@ const MapScreen = () => {
   };
 
   // Get territories for current category
-  const currentCategoryTerritories = territories.filter(t => 
+  const currentCategoryTerritories = territories.filter(t =>
     t.categoryId && selectedCategory && t.categoryId._id === selectedCategory._id
   );
 
@@ -361,7 +413,10 @@ const MapScreen = () => {
 
   return (
     <View style={styles.container}>
-      <MapContainer ref={mapRef}>
+      <MapContainer
+        ref={mapRef}
+        onRegionChangeComplete={handleRegionChangeComplete}
+      >
         {geoZones.map((zone) => {
           const [lon, lat] = zone.center.coordinates;
           return (
@@ -381,6 +436,8 @@ const MapScreen = () => {
             showGrid={showGrid}
             onTerritoryPress={handleTerritoryPress}
             currentUserId={user?.id}
+            filterResolution={selectedCategory?.name === 'Fitness' ? 'L' : 'S'}
+            cells={visibleCells}
           />
         )}
       </MapContainer>
@@ -389,7 +446,7 @@ const MapScreen = () => {
       {renderChildGeoZonePanel()}
 
       <View style={styles.categoryContainer}>
-        <CategorySelector 
+        <CategorySelector
           compact={true}
           onCategoryChange={(category) => {
             console.log(`🗺️ MapScreen: Category changed to ${category.name}`);
@@ -398,26 +455,26 @@ const MapScreen = () => {
       </View>
 
       <View style={styles.controlsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.controlButton}
           onPress={handleRefreshLocation}
         >
           <Ionicons name="refresh" size={24} color={colors.primary} />
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.controlButton}
           onPress={() => setShowGrid(!showGrid)}
         >
-          <Ionicons 
-            name={showGrid ? "grid" : "grid-outline"} 
-            size={24} 
-            color={colors.primary} 
+          <Ionicons
+            name={showGrid ? "grid" : "grid-outline"}
+            size={24}
+            color={colors.primary}
           />
         </TouchableOpacity>
 
         {/* Manual Territory Refresh Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.controlButton}
           onPress={() => loadAllTerritories()}
         >
@@ -428,7 +485,7 @@ const MapScreen = () => {
         {currentCellId && selectedCategory && user && (
           <>
             {getTerritoryStatus(currentCellId) === 'unclaimed' && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.controlButton, styles.claimButton]}
                 onPress={handleClaimTerritory}
               >
@@ -437,7 +494,7 @@ const MapScreen = () => {
             )}
 
             {isClaimedByUser(currentCellId, user.id) && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.controlButton, styles.releaseButton]}
                 onPress={handleReleaseTerritory}
               >
@@ -496,7 +553,7 @@ const MapScreen = () => {
               </Text>
             </View>
           )}
-          
+
           {/* Territory Statistics */}
           <View style={styles.statsSection}>
             <Text style={styles.statsTitle}>Territory Stats:</Text>
@@ -513,29 +570,29 @@ const MapScreen = () => {
               </Text>
             </View>
           </View>
-          
+
           {/* Territory Legend */}
-              <View style={styles.legendSection}>
-                <Text style={styles.legendTitle}>Territory System:</Text>
-                <View style={styles.legendRow}>
-                  <View style={[styles.legendColorBox, { backgroundColor: selectedCategory?.color + '80' || colors.success + '80' }]} />
-                  <Text style={styles.legendText}>Claimed ({selectedCategory?.name || 'Current Category'})</Text>
-                </View>
-                <View style={styles.legendRow}>
-                  <View style={[styles.legendColorBox, { backgroundColor: colors.gray + '20' }]} />
-                  <Text style={styles.legendText}>Unclaimed</Text>
-                </View>
-                <View style={styles.legendRow}>
-                  <View style={[styles.legendColorBox, { backgroundColor: colors.primary + '30' }]} />
-                  <Text style={styles.legendText}>Your Location</Text>
-                </View>
-                <Text style={styles.legendNote}>
-                  💡 All claimed territories are visible globally. New claims use selected category.
-                </Text>
-              </View>
+          <View style={styles.legendSection}>
+            <Text style={styles.legendTitle}>Territory System:</Text>
+            <View style={styles.legendRow}>
+              <View style={[styles.legendColorBox, { backgroundColor: selectedCategory?.color + '80' || colors.success + '80' }]} />
+              <Text style={styles.legendText}>Claimed ({selectedCategory?.name || 'Current Category'})</Text>
+            </View>
+            <View style={styles.legendRow}>
+              <View style={[styles.legendColorBox, { backgroundColor: colors.gray + '20' }]} />
+              <Text style={styles.legendText}>Unclaimed</Text>
+            </View>
+            <View style={styles.legendRow}>
+              <View style={[styles.legendColorBox, { backgroundColor: colors.primary + '30' }]} />
+              <Text style={styles.legendText}>Your Location</Text>
+            </View>
+            <Text style={styles.legendNote}>
+              💡 All claimed territories are visible globally. New claims use selected category.
+            </Text>
+          </View>
         </View>
       )}
-      
+
       {/* Territory Info Modal */}
       <TerritoryInfoModal
         visible={showTerritoryModal}
@@ -673,17 +730,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.light,
   },
-      legendText: {
-        fontSize: 9,
-        color: colors.text.secondary,
-      },
-      legendNote: {
-        fontSize: 8,
-        color: colors.text.secondary,
-        fontStyle: 'italic',
-        marginTop: 4,
-        textAlign: 'center',
-      },
+  legendText: {
+    fontSize: 9,
+    color: colors.text.secondary,
+  },
+  legendNote: {
+    fontSize: 8,
+    color: colors.text.secondary,
+    fontStyle: 'italic',
+    marginTop: 4,
+    textAlign: 'center',
+  },
   zonePanel: {
     position: 'absolute',
     top: 60,

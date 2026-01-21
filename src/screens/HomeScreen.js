@@ -2,10 +2,12 @@ import React, { useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import { useHabits } from '../context/HabitContext';
 import { colors } from '../config/colors';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useContext(AuthContext);
+  const { habits } = useHabits();
 
   const handleProfile = () => {
     navigation.navigate('Profile');
@@ -25,7 +27,7 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.greeting}>Good morning!</Text>
             <Text style={styles.userName}>{user?.fullName || 'User'}</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileButton}
             onPress={handleProfile}
           >
@@ -55,18 +57,24 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <Ionicons name="checkmark-circle" size={24} color={colors.success} />
-              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statNumber}>
+                {habits.reduce((acc, h) => acc + (h.totalCompletions || 0), 0)}
+              </Text>
               <Text style={styles.statLabel}>Habits Completed</Text>
             </View>
             <View style={styles.statCard}>
               <Ionicons name="calendar" size={24} color={colors.primary} />
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Days Streak</Text>
+              <Text style={styles.statNumber}>
+                {Math.max(0, ...habits.map(h => h.streak || 0))}
+              </Text>
+              <Text style={styles.statLabel}>Best Streak</Text>
             </View>
             <View style={styles.statCard}>
               <Ionicons name="trophy" size={24} color={colors.accent} />
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Achievements</Text>
+              <Text style={styles.statNumber}>
+                {habits.filter(h => h.streak >= 7).length}
+              </Text>
+              <Text style={styles.statLabel}>7+ Day Streaks</Text>
             </View>
           </View>
         </View>
@@ -75,11 +83,17 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.actionsContainer}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('CreateHabit')}
+            >
               <Ionicons name="add-circle" size={32} color={colors.primary} />
               <Text style={styles.actionText}>Add Habit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Habits')}
+            >
               <Ionicons name="analytics" size={32} color={colors.secondary} />
               <Text style={styles.actionText}>View Stats</Text>
             </TouchableOpacity>

@@ -7,6 +7,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { LocationProvider } from './src/context/LocationContext';
 import { CategoryProvider } from './src/context/CategoryContext';
 import { TerritoryProvider } from './src/context/TerritoryContext';
+import { HabitProvider } from './src/context/HabitContext';
 import config from './src/config';
 
 export default function App() {
@@ -22,10 +23,12 @@ export default function App() {
         <LocationProvider>
           <CategoryProvider>
             <TerritoryProvider>
-              <NavigationContainer>
-                <AppNavigator />
-                <StatusBar style="auto" />
-              </NavigationContainer>
+              <HabitProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                  <StatusBar style="auto" />
+                </NavigationContainer>
+              </HabitProvider>
             </TerritoryProvider>
           </CategoryProvider>
         </LocationProvider>

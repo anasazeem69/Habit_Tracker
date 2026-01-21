@@ -167,3 +167,21 @@ export const updateTerritoryActivity = async (cellId, userId) => {
     throw error;
   }
 };
+
+// Get territory history
+export const getTerritoryHistory = async (cellId) => {
+  try {
+    console.log(`📜 Fetching history for: ${cellId}`);
+    const response = await territoryAPI.get(`/${cellId}/history`);
+
+    if (response.data.success) {
+      console.log(`✅ Successfully fetched history for: ${cellId}`);
+      return response.data;
+    } else {
+      throw new Error(response.data.error || 'Failed to fetch history');
+    }
+  } catch (error) {
+    console.error('❌ Get territory history failed:', error.message);
+    throw error;
+  }
+};

@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
+import HabitListScreen from '../screens/HabitListScreen';
 import MapScreen from '../screens/MapScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { colors } from '../config/colors';
@@ -9,7 +10,7 @@ import { colors } from '../config/colors';
 const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => (
-  <Tab.Navigator 
+  <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
       tabBarIcon: ({ focused, color, size }) => {
@@ -17,6 +18,8 @@ const TabNavigator = () => (
 
         if (route.name === 'Home') {
           iconName = focused ? 'home' : 'home-outline';
+        } else if (route.name === 'Habits') {
+          iconName = focused ? 'list' : 'list-outline';
         } else if (route.name === 'Map') {
           iconName = focused ? 'map' : 'map-outline';
         } else if (route.name === 'Profile') {
@@ -47,22 +50,29 @@ const TabNavigator = () => (
       },
     })}
   >
-    <Tab.Screen 
-      name="Home" 
+    <Tab.Screen
+      name="Home"
       component={HomeScreen}
       options={{
         tabBarLabel: 'Home',
       }}
     />
-    <Tab.Screen 
-      name="Map" 
+    <Tab.Screen
+      name="Habits"
+      component={HabitListScreen}
+      options={{
+        tabBarLabel: 'Habits',
+      }}
+    />
+    <Tab.Screen
+      name="Map"
       component={MapScreen}
       options={{
         tabBarLabel: 'Map',
       }}
     />
-    <Tab.Screen 
-      name="Profile" 
+    <Tab.Screen
+      name="Profile"
       component={ProfileScreen}
       options={{
         tabBarLabel: 'Profile',

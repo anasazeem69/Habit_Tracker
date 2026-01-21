@@ -1,18 +1,19 @@
 
 import React, { useContext, useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, RefreshControl, Image, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import Button from '../components/Button';
 import { colors } from '../config/colors';
 import Input from '../components/Input';
 import GeoZoneManager from '../components/map/GeoZoneManager';
+import apiClient from '../api/client';
 
 const ProfileScreen = () => {
-  const { 
-    user, 
-    loading, 
-    logout, 
+  const {
+    user,
+    loading,
+    logout,
     getRemainingSessionTime,
     createLinkInvite,
     acceptLinkInvite,
@@ -20,6 +21,7 @@ const ProfileScreen = () => {
     loadUserLinks,
     getAuthToken,
   } = useContext(AuthContext);
+
   const [sessionTimeLeft, setSessionTimeLeft] = useState('');
   const [links, setLinks] = useState([]);
   const [linksLoading, setLinksLoading] = useState(false);
@@ -27,6 +29,11 @@ const ProfileScreen = () => {
   const [linkError, setLinkError] = useState('');
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [workingAction, setWorkingAction] = useState(null);
+
+  // Stats State
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const childOptions = useMemo(() => {
     if (!Array.isArray(links) || !user) return [];
@@ -41,6 +48,7 @@ const ProfileScreen = () => {
 
   useEffect(() => {
     if (user) {
+      fetchStats();
       const updateSessionTime = () => {
         const remainingMs = getRemainingSessionTime();
         if (remainingMs > 0) {
@@ -71,8 +79,29 @@ const ProfileScreen = () => {
     if (user) {
       refreshLinks();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  const fetchStats = async () => {
+    try {
+      setLoadingStats(true);
+      // Use apiClient which handles base URL and Auth headers automatically
+      const response = await apiClient.get('/v1/stats/dashboard');
+      if (response.data && response.data.success) {
+        setStats(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to load stats', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refreshLinks(), fetchStats()]);
+    setRefreshing(false);
+  };
 
   const refreshLinks = async () => {
     if (!loadUserLinks || !user) return;
@@ -167,6 +196,15 @@ const ProfileScreen = () => {
     }
   };
 
+  const renderBadge = ({ item }) => (
+    <View style={styles.badgeItem}>
+      <View style={[styles.badgeIcon, { backgroundColor: item.color || colors.primary + '20' }]}>
+        <Ionicons name={item.icon || 'trophy'} size={24} color={item.color || colors.primary} />
+      </View>
+      <Text style={styles.badgeName} numberOfLines={1}>{item.name}</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -174,7 +212,11 @@ const ProfileScreen = () => {
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
@@ -188,10 +230,70 @@ const ProfileScreen = () => {
           </View>
         </View>
 
+        {/* Gamification Stats */}
+        <View style={styles.statsCard}>
+          <View style={styles.levelRow}>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>{stats?.level || user.level || 1}</Text>
+              <Text style={styles.levelLabel}>LEVEL</Text>
+            </View>
+            <View style={styles.xpContainer}>
+              <View style={styles.xpHeader}>
+                <Text style={styles.xpLabel}>Total XP</Text>
+                <Text style={styles.xpValue}>{stats?.totalXP || user.totalXP || 0}</Text>
+              </View>
+              <View style={styles.xpTrack}>
+                <View style={[styles.xpFill, { width: `${stats?.xpProgress?.percent || 0}%` }]} />
+              </View>
+              <Text style={styles.xpNext}>
+                {stats?.xpProgress?.toNext || 100} XP to next level
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Badges Section */}
+        {stats?.badges && stats.badges.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Badges ({stats.badges.length})</Text>
+            <FlatList
+              data={stats.badges}
+              renderItem={renderBadge}
+              keyExtractor={item => item._id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.badgesList}
+            />
+          </View>
+        )}
+
+        {/* Category Stats Section */}
+        {stats?.categoryBreakdown && stats.categoryBreakdown.length > 0 && (
+          <View style={[styles.sectionContainer, styles.categoryCard]}>
+            <Text style={styles.sectionTitle}>Skill Tree</Text>
+            {stats.categoryBreakdown.map((cat) => (
+              <View key={cat.id} style={styles.skillRow}>
+                <View style={[styles.skillIcon, { backgroundColor: cat.color + '20' }]}>
+                  <Ionicons name={cat.icon || 'star'} size={14} color={cat.color} />
+                </View>
+                <View style={styles.skillInfo}>
+                  <View style={styles.skillHeader}>
+                    <Text style={styles.skillName}>{cat.name}</Text>
+                    <Text style={styles.skillXp}>{cat.xp} XP</Text>
+                  </View>
+                  <View style={styles.skillTrack}>
+                    <View style={[styles.skillFill, { width: '100%', backgroundColor: cat.color }]} />
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* User Details */}
         <View style={styles.detailsCard}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-          
+
           <View style={styles.detailRow}>
             <View style={styles.detailIcon}>
               <Ionicons name="person-outline" size={20} color={colors.primary} />
@@ -401,6 +503,7 @@ const ProfileScreen = () => {
           variant="secondary"
           style={styles.logoutButton}
         />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -665,6 +768,156 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.secondary,
     fontStyle: 'italic',
+  },
+  statsCard: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  levelBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 4,
+    borderColor: colors.primary + '40',
+  },
+  levelText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.white,
+    lineHeight: 24,
+  },
+  levelLabel: {
+    fontSize: 8,
+    color: colors.white,
+    fontWeight: 'bold',
+  },
+  xpContainer: {
+    flex: 1,
+  },
+  xpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  xpLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  xpValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  xpTrack: {
+    height: 8,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  xpFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  xpNext: {
+    fontSize: 10,
+    color: colors.text.tertiary,
+    textAlign: 'right',
+  },
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  badgesList: {
+    paddingRight: 20,
+  },
+  badgeItem: {
+    backgroundColor: colors.background.secondary, // Or card color
+    marginRight: 12,
+    alignItems: 'center',
+    width: 80,
+  },
+  badgeIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  badgeName: {
+    fontSize: 10,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  categoryCard: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  skillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  skillIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  skillInfo: {
+    flex: 1,
+  },
+  skillHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  skillName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  skillXp: {
+    fontSize: 12,
+    color: colors.text.secondary,
+    fontWeight: '700',
+  },
+  skillTrack: {
+    height: 6,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  skillFill: {
+    height: '100%',
+    borderRadius: 3,
   },
 });
 

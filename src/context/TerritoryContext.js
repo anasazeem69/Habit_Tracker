@@ -144,7 +144,7 @@ export const TerritoryProvider = ({ children }) => {
       if (result.success) {
         upsertTerritories([result.data]);
         console.log(`✅ TerritoryContext: Successfully claimed territory: ${cellId}`);
-        return result.data;
+        return result;
       } else {
         throw new Error(result.error || 'Failed to claim territory');
       }

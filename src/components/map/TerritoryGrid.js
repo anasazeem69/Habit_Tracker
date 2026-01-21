@@ -12,6 +12,8 @@ const TerritoryGrid = ({
   showGrid = true,
   onTerritoryPress,
   currentUserId,
+  filterResolution = 'S', // 'S' for small, 'L' for large
+  cells = null, // External control of visible cells
 }) => {
   const {
     territories,
@@ -21,20 +23,30 @@ const TerritoryGrid = ({
   } = useTerritories();
   const { selectedCategory } = useCategories();
 
-  const [visibleCells, setVisibleCells] = useState([]);
+  const [internalVisibleCells, setInternalVisibleCells] = useState([]);
+
+  // Use prop if provided, otherwise internal state
+  const cellsToRender = cells || internalVisibleCells;
 
   useEffect(() => {
-    if (centerCellId && showGrid) {
-      const cells = getNeighboringCells(centerCellId, radius);
-      setVisibleCells(cells);
-    } else {
-      setVisibleCells([]);
+    if (centerCellId && showGrid && !cells) {
+      const neighbors = getNeighboringCells(centerCellId, radius);
+      setInternalVisibleCells(neighbors);
+    } else if (!cells) {
+      setInternalVisibleCells([]);
     }
-  }, [centerCellId, radius, showGrid]);
+  }, [centerCellId, radius, showGrid, cells]);
 
   const displayTerritories = useMemo(
-    () => territories.filter((territory) => territory.status !== 'unclaimed'),
-    [territories]
+    () => {
+      return territories.filter((territory) => {
+        if (territory.status === 'unclaimed') return false;
+        // Filter by resolution key in cellId (e.g., "123_456_S" vs "12_45_L")
+        const resKey = territory.cellId?.split('_')[2] || 'S';
+        return resKey === filterResolution;
+      });
+    },
+    [territories, filterResolution]
   );
 
   const getTerritoryStyle = useCallback(
@@ -101,7 +113,7 @@ const TerritoryGrid = ({
   return (
     <>
       {showGrid &&
-        visibleCells.map((cellId) => {
+        cellsToRender.map((cellId) => {
           const coordinates = getCellBoundary(cellId);
           const style = getTerritoryStyle(cellId);
           const territory = getLocalTerritory(cellId);
