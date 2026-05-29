@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import HabitListScreen from '../screens/HabitListScreen';
 import MapScreen from '../screens/MapScreen';
+import LeaderboardScreen from '../screens/LeaderboardScreen';
+import SquadScreen from '../screens/SquadScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { colors } from '../config/colors';
 
@@ -22,6 +24,10 @@ const TabNavigator = () => (
           iconName = focused ? 'list' : 'list-outline';
         } else if (route.name === 'Map') {
           iconName = focused ? 'map' : 'map-outline';
+        } else if (route.name === 'Leaderboard') {
+          iconName = focused ? 'trophy' : 'trophy-outline';
+        } else if (route.name === 'Squads') {
+          iconName = focused ? 'people' : 'people-outline';
         } else if (route.name === 'Profile') {
           iconName = focused ? 'person' : 'person-outline';
         }
@@ -72,11 +78,19 @@ const TabNavigator = () => (
       }}
     />
     <Tab.Screen
+      name="Leaderboard"
+      component={LeaderboardScreen}
+      options={{ tabBarLabel: 'Leaders' }}
+    />
+    <Tab.Screen
+      name="Squads"
+      component={SquadScreen}
+      options={{ tabBarLabel: 'Squads' }}
+    />
+    <Tab.Screen
       name="Profile"
       component={ProfileScreen}
-      options={{
-        tabBarLabel: 'Profile',
-      }}
+      options={{ tabBarLabel: 'Profile' }}
     />
   </Tab.Navigator>
 );

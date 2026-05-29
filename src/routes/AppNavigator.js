@@ -11,11 +11,15 @@ import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import CreateHabitScreen from '../screens/CreateHabitScreen';
 import HabitDetailScreen from '../screens/HabitDetailScreen';
+import CoachScreen from '../screens/CoachScreen';
+import SquadLeaderboardScreen from '../screens/SquadLeaderboardScreen';
+import ValidationScreen from '../screens/ValidationScreen';
 import { colors } from '../config/colors';
+import FloatingCoachAgent from '../components/FloatingCoachAgent';
 
 const Stack = createNativeStackNavigator();
 
-const AppNavigator = () => {
+const AppNavigator = ({ navigationRef }) => {
   const { user, loading } = useContext(AuthContext);
 
   console.log('🧭 AppNavigator: user =', user ? user.email : 'null', 'loading =', loading);
@@ -34,6 +38,9 @@ const AppNavigator = () => {
               <Stack.Screen name="Main" component={TabNavigator} />
               <Stack.Screen name="CreateHabit" component={CreateHabitScreen} />
               <Stack.Screen name="HabitDetail" component={HabitDetailScreen} />
+              <Stack.Screen name="Coach" component={CoachScreen} />
+              <Stack.Screen name="SquadLeaderboard" component={SquadLeaderboardScreen} />
+              <Stack.Screen name="Validation" component={ValidationScreen} />
             </>
           )
         ) : (
@@ -63,6 +70,16 @@ const AppNavigator = () => {
         }}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      )}
+
+      {user && user.role !== 'doctor' && (
+        <FloatingCoachAgent
+          onOpenCoach={() => {
+            if (navigationRef?.isReady()) {
+              navigationRef.navigate('Coach');
+            }
+          }}
+        />
       )}
     </>
   );

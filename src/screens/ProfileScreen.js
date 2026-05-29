@@ -9,7 +9,7 @@ import Input from '../components/Input';
 import GeoZoneManager from '../components/map/GeoZoneManager';
 import apiClient from '../api/client';
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }) => {
   const {
     user,
     loading,
@@ -481,6 +481,15 @@ const ProfileScreen = () => {
             <Ionicons name="settings-outline" size={20} color={colors.text.primary} />
             <Text style={styles.actionText}>Settings</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { borderWidth: 1, borderColor: colors.info + '40' }]}
+            onPress={() => navigation.navigate('Validation')}
+          >
+            <Ionicons name="shield-checkmark-outline" size={20} color={colors.info} />
+            <Text style={[styles.actionText, { color: colors.info }]}>Data Integrity</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.info} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>

@@ -48,8 +48,7 @@ const deriveFallbackBaseUrl = () => {
   return `http://localhost:${DEFAULT_API_PORT}`;
 };
 
-const apiBaseUrl =
-  process.env.EXPO_PUBLIC_API_BASE_URL ||
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ||
   deriveFallbackBaseUrl();
 
 if (process.env.NODE_ENV !== 'production') {

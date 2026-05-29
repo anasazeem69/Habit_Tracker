@@ -471,6 +471,22 @@ export const AuthProvider = ({ children }) => {
     }
   }, [activeUser, authSource, legacyTokens]);
 
+  const updateUserProfile = useCallback(async (patch) => {
+    if (!activeUser || !patch || typeof patch !== 'object') return;
+
+    const updatedUser = { ...activeUser, ...patch };
+
+    if (authSource === 'legacy') {
+      setLegacyUser(updatedUser);
+      await saveLegacyUserSession(updatedUser, legacyTokens);
+      return;
+    }
+
+    if (authSource === 'clerk') {
+      setClerkLinkedUser(prev => (prev ? { ...prev, ...patch } : prev));
+    }
+  }, [activeUser, authSource, legacyTokens]);
+
   return (
     <AuthContext.Provider value={{
       user: activeUser,
@@ -493,7 +509,8 @@ export const AuthProvider = ({ children }) => {
       acceptLinkInvite,
       revokeLink,
       loadUserLinks,
-      updateUserStats
+      updateUserStats,
+      updateUserProfile
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { ClerkProvider } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import AppNavigator from './src/routes/AppNavigator';
@@ -9,6 +9,8 @@ import { CategoryProvider } from './src/context/CategoryContext';
 import { TerritoryProvider } from './src/context/TerritoryContext';
 import { HabitProvider } from './src/context/HabitContext';
 import config from './src/config';
+
+const navigationRef = createNavigationContainerRef();
 
 export default function App() {
   const publishableKey = config.CLERK_PUBLISHABLE_KEY;
@@ -24,8 +26,8 @@ export default function App() {
           <CategoryProvider>
             <TerritoryProvider>
               <HabitProvider>
-                <NavigationContainer>
-                  <AppNavigator />
+                <NavigationContainer ref={navigationRef}>
+                  <AppNavigator navigationRef={navigationRef} />
                   <StatusBar style="auto" />
                 </NavigationContainer>
               </HabitProvider>

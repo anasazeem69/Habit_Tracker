@@ -1,13 +1,61 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useContext, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { useHabits } from '../context/HabitContext';
 import { colors } from '../config/colors';
+import { getAIInsights, updateAIConsent } from '../api/coaching';
 
 const HomeScreen = ({ navigation }) => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, updateUserProfile } = useContext(AuthContext);
   const { habits } = useHabits();
+  
+  const [insights, setInsights] = useState(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+
+  useEffect(() => {
+    if (user?.aiConsent) {
+      fetchInsights();
+    }
+  }, [user?.aiConsent]);
+
+  const fetchInsights = async () => {
+    try {
+      setLoadingInsights(true);
+      const data = await getAIInsights();
+      if (data.success) {
+        setInsights(data.data);
+      }
+    } catch (error) {
+      console.log('Failed to fetch AI insights:', error.message);
+    } finally {
+      setLoadingInsights(false);
+    }
+  };
+
+  const handleEnableAI = async () => {
+    Alert.alert(
+      "Enable AI Coaching",
+      "By enabling this, your habit data will be securely analyzed by AI to provide personalized coaching and insights. Do you consent?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "I Consent", 
+          onPress: async () => {
+            try {
+              setLoadingInsights(true);
+              await updateAIConsent(true);
+              await updateUserProfile({ aiConsent: true });
+              fetchInsights();
+            } catch (error) {
+              Alert.alert("Error", "Failed to enable AI Coaching");
+              setLoadingInsights(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleProfile = () => {
     navigation.navigate('Profile');
@@ -49,6 +97,39 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.welcomeIcon}>
             <Ionicons name="trending-up" size={48} color={colors.primary} />
           </View>
+        </View>
+
+        {/* Coach's Note Widget */}
+        <View style={styles.coachContainer}>
+          <Text style={styles.sectionTitle}>Coach's Note</Text>
+          <TouchableOpacity 
+            style={styles.coachCard}
+            onPress={() => navigation.navigate('Coach')}
+          >
+            <View style={styles.coachHeader}>
+              <Ionicons name="bulb" size={24} color={colors.accent} />
+              <Text style={styles.coachTitle}>AI Coaching</Text>
+            </View>
+            {loadingInsights ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : insights ? (
+              <Text style={styles.coachMessage}>{insights.widgetMessage}</Text>
+            ) : user?.aiConsent ? (
+              <Text style={styles.coachMessage}>
+                AI Coach is enabled. Open Coach for your latest interactive guidance.
+              </Text>
+            ) : (
+              <View>
+                <Text style={styles.coachMessage}>Get real-time personalized insights and risk alerts for your habits.</Text>
+                <TouchableOpacity style={styles.consentButton} onPress={handleEnableAI}>
+                  <Text style={styles.consentButtonText}>Enable AI Coach</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {insights && (
+              <Text style={styles.coachTapText}>Tap to see detailed insights</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Quick Stats */}
@@ -101,15 +182,6 @@ const HomeScreen = ({ navigation }) => {
               <Ionicons name="settings" size={32} color={colors.text.secondary} />
               <Text style={styles.actionText}>Settings</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Recent Activity */}
-        <View style={styles.activityContainer}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <View style={styles.activityCard}>
-            <Ionicons name="time" size={20} color={colors.text.tertiary} />
-            <Text style={styles.activityText}>No recent activity</Text>
           </View>
         </View>
       </ScrollView>
@@ -268,6 +340,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.secondary,
     marginLeft: 12,
+  },
+  coachContainer: {
+    marginBottom: 24,
+  },
+  coachCard: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.accent,
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  coachHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  coachTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginLeft: 8,
+  },
+  coachMessage: {
+    fontSize: 15,
+    color: colors.text.secondary,
+    lineHeight: 22,
+    fontStyle: 'italic',
+  },
+  coachTapText: {
+    fontSize: 12,
+    color: colors.primary,
+    marginTop: 12,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  consentButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+  },
+  consentButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });
 

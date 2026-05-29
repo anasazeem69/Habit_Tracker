@@ -185,3 +185,23 @@ export const getTerritoryHistory = async (cellId) => {
     throw error;
   }
 };
+
+// Get local dominance leaderboard
+export const getLocalLeaderboard = async (latitude, longitude, radius = 10) => {
+  try {
+    console.log(`🏆 Fetching local leaderboard...`);
+    const response = await territoryAPI.get('/leaderboard', {
+      params: { latitude, longitude, radius }
+    });
+
+    if (response.data.success) {
+      console.log(`✅ Successfully fetched local leaderboard`);
+      return response.data;
+    } else {
+      throw new Error(response.data.error || 'Failed to fetch local leaderboard');
+    }
+  } catch (error) {
+    console.error('❌ Get local leaderboard failed:', error.message);
+    throw error;
+  }
+};
