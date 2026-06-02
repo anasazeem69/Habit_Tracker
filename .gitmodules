@@ -1,0 +1,6 @@
+[submodule "Habit_Frontend"]
+	path = Habit_Frontend
+	url = https://github.com/Talha49/Habit_Frontend.git
+[submodule "Habit_Backend"]
+	path = Habit_Backend
+	url = https://github.com/Talha49/Habit_Backend.git
