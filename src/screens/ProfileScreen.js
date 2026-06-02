@@ -1,7 +1,9 @@
 
 import React, { useContext, useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, RefreshControl, Image, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, RefreshControl, Image, FlatList, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { AuthContext } from '../context/AuthContext';
 import Button from '../components/Button';
 import { colors } from '../config/colors';
@@ -191,6 +193,81 @@ const ProfileScreen = ({ navigation }) => {
       await refreshLinks();
     } catch (error) {
       setLinkError(error.message || 'Failed to revoke link');
+    } finally {
+      setWorkingAction(null);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      setWorkingAction('export');
+      
+      const response = await apiClient.get('/v1/stats/export');
+      if (!response.data?.success) {
+        throw new Error('Failed to fetch export data from server');
+      }
+      
+      const data = response.data.data;
+      
+      const htmlContent = `
+        <html>
+          <head>
+            <style>
+              body { font-family: Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+              h1 { color: #007AFF; text-align: center; }
+              h2 { border-bottom: 2px solid #EEE; padding-bottom: 5px; margin-top: 30px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+              th, td { border: 1px solid #DDD; padding: 8px; text-align: left; }
+              th { background-color: #F8F8F8; }
+            </style>
+          </head>
+          <body>
+            <h1>Habit Tracker - Data Export</h1>
+            <p><strong>Name:</strong> ${data.profile?.fullName || 'User'}</p>
+            <p><strong>Email:</strong> ${data.profile?.email || 'N/A'}</p>
+            <p><strong>Account Level:</strong> ${data.profile?.level || 1} (${data.profile?.totalXP || 0} XP)</p>
+            <p><strong>Export Date:</strong> ${new Date().toLocaleDateString()}</p>
+            
+            <h2>Your Habits</h2>
+            <table>
+              <tr><th>Habit Name</th><th>Streak</th><th>Frequency</th><th>Status</th></tr>
+              ${data.habits?.map(h => `
+                <tr>
+                  <td>${h.title}</td>
+                  <td>${h.streak} days</td>
+                  <td>${h.frequency?.type || 'Daily'}</td>
+                  <td>${h.isActive ? 'Active' : 'Inactive'}</td>
+                </tr>
+              `).join('') || ''}
+            </table>
+            
+            <h2>Validation Logs (Last 50)</h2>
+            <table>
+              <tr><th>Date</th><th>Type</th><th>Status</th><th>Reason</th></tr>
+              ${data.validationLogs?.slice(0, 50).map(l => `
+                <tr>
+                  <td>${new Date(l.createdAt).toLocaleDateString()}</td>
+                  <td>${l.checkType}</td>
+                  <td>${l.status}</td>
+                  <td>${l.reason || '-'}</td>
+                </tr>
+              `).join('') || ''}
+            </table>
+          </body>
+        </html>
+      `;
+      
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', 'Could not generate your PDF data report.');
     } finally {
       setWorkingAction(null);
     }
@@ -490,6 +567,18 @@ const ProfileScreen = ({ navigation }) => {
             <Ionicons name="shield-checkmark-outline" size={20} color={colors.info} />
             <Text style={[styles.actionText, { color: colors.info }]}>Data Integrity</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.info} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { borderWidth: 1, borderColor: colors.success + '40' }]}
+            onPress={handleExportPDF}
+            disabled={workingAction === 'export'}
+          >
+            <Ionicons name="document-text-outline" size={20} color={colors.success} />
+            <Text style={[styles.actionText, { color: colors.success }]}>
+              {workingAction === 'export' ? 'Generating PDF...' : 'Export Data as PDF'}
+            </Text>
+            <Ionicons name="download-outline" size={16} color={colors.success} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>

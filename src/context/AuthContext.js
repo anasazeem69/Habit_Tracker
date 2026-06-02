@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as authApi from '../api/auth';
 import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/clerk-expo';
 import { parseJwt } from '../utils/jwt';
+import { Platform } from 'react-native';
 
 // Session configuration
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -280,6 +281,8 @@ export const AuthProvider = ({ children }) => {
   }, [combinedClerkUser, legacyUser, clerkUser, isSignedIn]);
 
   const isLoading = !isClerkLoaded || loadingLegacyState || clerkLinkLoading;
+
+  // Push notifications removed as per user request
 
   const login = async (data) => {
     try {

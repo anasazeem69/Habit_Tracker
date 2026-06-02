@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/habitzon2.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.HabitTrackingApp"
     },
     "web": {
       "favicon": "./assets/favicon.png"

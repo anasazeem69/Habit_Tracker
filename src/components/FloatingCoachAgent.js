@@ -12,12 +12,9 @@ const FloatingCoachAgent = ({ onOpenCoach }) => {
 
   const checkUnreadAlerts = async () => {
     try {
-      console.log('FloatingCoachAgent: Checking for unread alerts...');
       const response = await getCoachNotifications(5);
-      console.log('FloatingCoachAgent Response:', response);
       if (response.success && response.data) {
         const hasUnreadAlerts = response.data.some(n => n.status === 'unread');
-        console.log('FloatingCoachAgent hasUnread:', hasUnreadAlerts);
         setHasUnread(hasUnreadAlerts);
       }
     } catch (e) {

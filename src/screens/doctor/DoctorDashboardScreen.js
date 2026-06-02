@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as doctorApi from '../../api/doctor';
 import { colors } from '../../config/colors';
+import NotificationBell from '../../components/NotificationBell';
 
 const DoctorDashboardScreen = () => {
     const navigation = useNavigation();
@@ -85,9 +86,12 @@ const DoctorDashboardScreen = () => {
                     <Text style={styles.greeting}>Welcome,</Text>
                     <Text style={styles.title}>Dr. Dashboard</Text>
                 </View>
-                <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate('Profile')}>
-                    <Ionicons name="person-circle-outline" size={32} color={colors.primary} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <NotificationBell style={{ marginRight: 15 }} />
+                    <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate('Profile')}>
+                        <Ionicons name="person-circle-outline" size={32} color={colors.primary} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.searchContainer}>

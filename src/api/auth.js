@@ -198,6 +198,14 @@ export const fetchUserLinks = async (userId) => {
   return response.data;
 };
 
+export const updatePushToken = async (token) => {
+  const response = await apiClient.post('/v1/auth/update-push-token', { token });
+  if (!response.data) {
+    throw new Error('Invalid response from server');
+  }
+  return response.data;
+};
+
 export const fetchCurrentUser = async (authToken) => {
   try {
     const headers = authToken

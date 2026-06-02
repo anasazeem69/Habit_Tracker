@@ -1,6 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { LogBox } from 'react-native';
 import { ClerkProvider } from '@clerk/clerk-expo';
+
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications', // Suppress Expo Go push notification warning
+]);
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import AppNavigator from './src/routes/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';

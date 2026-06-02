@@ -95,6 +95,14 @@ const PatientDetailScreen = () => {
                     </View>
                     <Text style={styles.emailText}>{patient.email}</Text>
                     <Text style={styles.phoneText}>{patient.phone}</Text>
+                    
+                    <TouchableOpacity 
+                        style={styles.messageButton} 
+                        onPress={() => navigation.navigate('Chat', { targetUserId: patient.id, title: patient.fullName })}
+                    >
+                        <Ionicons name="chatbubble-ellipses" size={20} color={colors.white} />
+                        <Text style={styles.messageButtonText}>Message Patient</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {renderStats()}
@@ -173,6 +181,26 @@ const styles = StyleSheet.create({
     phoneText: {
         fontSize: 14,
         color: colors.text.tertiary,
+    },
+    messageButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primary,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+        marginTop: 15,
+        shadowColor: colors.shadow.light,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    messageButtonText: {
+        color: colors.white,
+        fontWeight: 'bold',
+        marginLeft: 8,
+        fontSize: 16,
     },
     statsContainer: {
         flexDirection: 'row',

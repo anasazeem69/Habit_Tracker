@@ -5,6 +5,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useHabits } from '../context/HabitContext';
 import { colors } from '../config/colors';
 import { getAIInsights, updateAIConsent } from '../api/coaching';
+import NotificationBell from '../components/NotificationBell';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout, updateUserProfile } = useContext(AuthContext);
@@ -75,12 +76,15 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.greeting}>Good morning!</Text>
             <Text style={styles.userName}>{user?.fullName || 'User'}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={handleProfile}
-          >
-            <Ionicons name="person-circle" size={40} color={colors.primary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <NotificationBell style={{ marginRight: 15 }} />
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={handleProfile}
+            >
+              <Ionicons name="person-circle" size={40} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -173,7 +177,7 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionCard}
-              onPress={() => navigation.navigate('Habits')}
+              onPress={() => navigation.navigate('Analytics')}
             >
               <Ionicons name="analytics" size={32} color={colors.secondary} />
               <Text style={styles.actionText}>View Stats</Text>

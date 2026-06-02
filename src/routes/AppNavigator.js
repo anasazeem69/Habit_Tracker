@@ -14,6 +14,9 @@ import HabitDetailScreen from '../screens/HabitDetailScreen';
 import CoachScreen from '../screens/CoachScreen';
 import SquadLeaderboardScreen from '../screens/SquadLeaderboardScreen';
 import ValidationScreen from '../screens/ValidationScreen';
+import ChatScreen from '../screens/ChatScreen';
+import NotificationScreen from '../screens/NotificationScreen';
+import AnalyticsScreen from '../screens/AnalyticsScreen';
 import { colors } from '../config/colors';
 import FloatingCoachAgent from '../components/FloatingCoachAgent';
 
@@ -41,6 +44,9 @@ const AppNavigator = ({ navigationRef }) => {
               <Stack.Screen name="Coach" component={CoachScreen} />
               <Stack.Screen name="SquadLeaderboard" component={SquadLeaderboardScreen} />
               <Stack.Screen name="Validation" component={ValidationScreen} />
+              <Stack.Screen name="Chat" component={ChatScreen} />
+              <Stack.Screen name="Notifications" component={NotificationScreen} />
+              <Stack.Screen name="Analytics" component={AnalyticsScreen} />
             </>
           )
         ) : (

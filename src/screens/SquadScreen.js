@@ -157,10 +157,17 @@ const SquadScreen = ({ navigation }) => {
               </View>
             ))}
 
-            <TouchableOpacity style={styles.leaderboardBtn} onPress={() => navigation.navigate('SquadLeaderboard')}>
-              <Ionicons name="trophy" size={20} color="#FFF" />
-              <Text style={styles.leaderboardBtnText}>View Squad Leaderboard</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+              <TouchableOpacity style={[styles.leaderboardBtn, { flex: 1, marginRight: 8 }]} onPress={() => navigation.navigate('SquadLeaderboard')}>
+                <Ionicons name="trophy" size={20} color="#FFF" />
+                <Text style={styles.leaderboardBtnText}>Leaderboard</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.leaderboardBtn, { flex: 1, marginLeft: 8, backgroundColor: '#28a745' }]} onPress={() => navigation.navigate('Chat', { squadId: squad._id, title: squad.name })}>
+                <Ionicons name="chatbubbles" size={20} color="#FFF" />
+                <Text style={styles.leaderboardBtnText}>Squad Chat</Text>
+              </TouchableOpacity>
+            </View>
           </>
         ) : (
           // --- No Squad View ---
@@ -185,9 +192,9 @@ const SquadScreen = ({ navigation }) => {
                 placeholderTextColor={colors.text.tertiary}
                 value={inviteCode}
                 onChangeText={t => setInviteCode(t.toUpperCase())}
-                maxLength={6}
+                placeholderTextColor="#A0AEC0"
                 autoCapitalize="characters"
-              />
+                maxLength={20}/>
               <TouchableOpacity style={styles.joinBtn} onPress={handleJoin} disabled={joining}>
                 {joining ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.joinBtnText}>Join</Text>}
               </TouchableOpacity>
